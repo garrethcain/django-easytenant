@@ -1,0 +1,105 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-easyshard"
+version = "0.1.0"
+description = "JWT-driven database sharding for Django. Database-per-tenant routing with pluggable shard ID extraction, dynamic shard discovery, and tiered infrastructure support."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Garreth Cain", email = "garrethccain@gmail.com" }]
+requires-python = ">=3.8"
+classifiers = [
+  "Environment :: Web Environment",
+  "Framework :: Django",
+  "Framework :: Django :: 3.2",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Database",
+]
+dependencies = [
+  "Django >= 3.2",
+  "cryptography >= 41.0.0",
+]
+
+[project.optional-dependencies]
+jwt = ["PyJWT >= 2.8.0"]
+remote = ["requests >= 2.24.0"]
+dev = [
+  "pytest>=7.0.0",
+  "pytest-django>=4.5.0",
+  "pytest-cov>=4.0.0",
+  "responses>=0.23.0",
+  "PyJWT>=2.8.0",
+  "requests>=2.24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/garrethcain/django-easyshard"
+Repository = "https://github.com/garrethcain/django-easyshard"
+
+[tool.setuptools.packages.find]
+include = ["easyshard*"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--verbose --tb=short --cov=easyshard --cov-report=term-missing"
+
+[tool.ruff]
+line-length = 110
+
+[tool.semantic_release]
+version_variables = ["easyshard/__init__.py:__version__"]
+version_toml = ["pyproject.toml:project.version"]
+commit_message = "chore(release): {version} [skip ci]"
+commit_author = "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+
+[tool.semantic_release.branches.main]
+match = "(master|main)"
+prerelease = false
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+output_format = "md"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = [
+  "build",
+  "chore",
+  "ci",
+  "docs",
+  "feat",
+  "fix",
+  "perf",
+  "refactor",
+  "style",
+  "test",
+]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+
+[tool.semantic_release.publish]
+dist_glob_patterns = ["dist/*"]
+upload_to_vcs_release = true
+
+[tool.semantic_release.remote.token]
+env = "GH_TOKEN"
+
+[dependency-groups]
+dev = []

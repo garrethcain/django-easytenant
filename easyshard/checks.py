@@ -1,0 +1,39 @@
+from django.core.checks import Warning, register
+
+
+@register()
+def check_shard_settings(app_configs, **kwargs):
+    """System checks for django-easyshard configuration."""
+    from easyshard.settings import api_settings
+
+    errors = []
+
+    mode = api_settings._get_raw_setting("CONFIG_MODE") or "local"
+
+    if mode == "remote":
+        if not api_settings._get_raw_setting("REMOTE_SHARD_CONFIG_URL"):
+            errors.append(
+                Warning(
+                    "REMOTE_SHARD_CONFIG_URL is not set. Required when CONFIG_MODE='remote'.",
+                    id="easyshard.W001",
+                )
+            )
+        if not api_settings._get_raw_setting("SERVICE_TOKEN"):
+            errors.append(
+                Warning(
+                    "SERVICE_TOKEN is not set. Required when CONFIG_MODE='remote'.",
+                    id="easyshard.W002",
+                )
+            )
+
+    if not api_settings._get_raw_setting("ENCRYPTION_KEY"):
+        errors.append(
+            Warning(
+                "ENCRYPTION_KEY is not set. "
+                "Falling back to SECRET_KEY-derived key. "
+                "Set a dedicated key for production.",
+                id="easyshard.W003",
+            )
+        )
+
+    return errors

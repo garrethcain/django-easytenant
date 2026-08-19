@@ -1,0 +1,47 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+default_language_version:
+  python: python3.10
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        args: ['-l 110']
+        exclude: ^.*\b(migrations)\b.*$
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: ruff
+        alias: autoformat
+        args: [--fix]
+        exclude: (migrations)
+  - repo: https://github.com/adamchainz/django-upgrade
+    rev: 1.22.2
+    hooks:
+      - id: django-upgrade
+        args: [--target-version, '5.0']
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        args:
+          [
+            --no-strict-optional,
+            --ignore-missing-imports,
+            '--config=setup.cfg',
+          ]
+        exclude: 'gw_config_proxy_lambd|[a-zA-Z]*/[a-zA-Z]*/(migrations|commands)/(.)*'
+        additional_dependencies:
+          [
+            'djangorestframework-stubs[compatible-mypy]',
+            'types-requests',
+          ]
