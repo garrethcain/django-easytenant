@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "django-easyshard"
+name = "django-easytenant"
 version = "0.1.0"
-description = "JWT-driven database sharding for Django. Database-per-tenant routing with pluggable shard ID extraction, dynamic shard discovery, and tiered infrastructure support."
+description = "JWT-driven database routing for Django. Database-per-tenant routing with pluggable tenant ID extraction, dynamic tenant discovery, and tiered infrastructure support."
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Garreth Cain", email = "garrethccain@gmail.com" }]
@@ -47,11 +47,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/garrethcain/django-easyshard"
-Repository = "https://github.com/garrethcain/django-easyshard"
+Homepage = "https://github.com/garrethcain/django-easytenant"
+Repository = "https://github.com/garrethcain/django-easytenant"
 
 [tool.setuptools.packages.find]
-include = ["easyshard*"]
+include = ["easytenant*"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
@@ -59,13 +59,14 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--verbose --tb=short --cov=easyshard --cov-report=term-missing"
+addopts = "--verbose --tb=short --cov=easytenant --cov-report=term-missing"
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 110
 
 [tool.semantic_release]
-version_variables = ["easyshard/__init__.py:__version__"]
+version_variables = ["easytenant/__init__.py:__version__"]
 version_toml = ["pyproject.toml:project.version"]
 commit_message = "chore(release): {version} [skip ci]"
 commit_author = "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"

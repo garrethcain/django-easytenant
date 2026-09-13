@@ -974,7 +974,7 @@ wheels = [
 ]
 
 [[package]]
-name = "django-easyshard"
+name = "django-easytenant"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

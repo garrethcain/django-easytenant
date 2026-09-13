@@ -1,34 +1,34 @@
 import pytest
 
-from easyshard.encrypted_fields import _get_fernet
-from easyshard.models import ShardConfig
+from easytenant.encrypted_fields import _get_fernet
+from easytenant.models import TenantConfig
 
 
 @pytest.mark.django_db
-class TestShardConfig:
-    def test_create_shard_config(self):
-        from tests.conftest import make_shard_config
+class TestTenantConfig:
+    def test_create_tenant_config(self):
+        from tests.conftest import make_tenant_config
 
-        config = make_shard_config(shard_id="east", db_alias="shard_east")
+        config = make_tenant_config(tenant_id="east", db_alias="tenant_east")
         assert config.pk is not None
-        assert config.shard_id == "east"
+        assert config.tenant_id == "east"
         assert config.is_active is True
 
     def test_password_is_encrypted_in_db(self):
         from django.db import connection
 
-        from tests.conftest import make_shard_config
+        from tests.conftest import make_tenant_config
 
-        config = make_shard_config(
-            shard_id="west",
-            db_alias="shard_west",
+        config = make_tenant_config(
+            tenant_id="west",
+            db_alias="tenant_west",
             name="tenant_west",
             password="mysecret",
         )
 
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT password FROM easyshard_shardconfig WHERE id = %s",
+                "SELECT password FROM easytenant_tenantconfig WHERE id = %s",
                 [config.pk],
             )
             row = cursor.fetchone()
@@ -36,15 +36,15 @@ class TestShardConfig:
         assert row[0] != "mysecret"
         assert row[0].startswith("gAAAAA")
 
-        reloaded = ShardConfig.objects.get(pk=config.pk)
+        reloaded = TenantConfig.objects.get(pk=config.pk)
         assert reloaded.password == "mysecret"
 
     def test_to_connection_dict(self):
-        from tests.conftest import make_shard_config
+        from tests.conftest import make_tenant_config
 
-        config = make_shard_config(
-            shard_id="north",
-            db_alias="shard_north",
+        config = make_tenant_config(
+            tenant_id="north",
+            db_alias="tenant_north",
             name="tenant_north",
             host="db.example.com",
             port=5433,
@@ -59,25 +59,25 @@ class TestShardConfig:
         assert d["PASSWORD"] == "pass"
 
     def test_str_representation(self):
-        config = ShardConfig(
-            shard_id="east",
-            db_alias="shard_east",
+        config = TenantConfig(
+            tenant_id="east",
+            db_alias="tenant_east",
             name="tenant_east",
             host="localhost",
             port=5432,
             user="app",
             password="secret",
         )
-        assert str(config) == "east → shard_east"
+        assert str(config) == "east → tenant_east"
 
     def test_is_active_filtering(self):
-        from tests.conftest import make_shard_config
+        from tests.conftest import make_tenant_config
 
-        make_shard_config(shard_id="active", db_alias="shard_a", is_active=True)
-        make_shard_config(shard_id="inactive", db_alias="shard_i", is_active=False)
-        active = ShardConfig.objects.filter(is_active=True)
+        make_tenant_config(tenant_id="active", db_alias="tenant_a", is_active=True)
+        make_tenant_config(tenant_id="inactive", db_alias="tenant_i", is_active=False)
+        active = TenantConfig.objects.filter(is_active=True)
         assert active.count() >= 1
-        assert "inactive" not in [s.shard_id for s in active]
+        assert "inactive" not in [s.tenant_id for s in active]
 
 
 class TestEncryptedCharField:

@@ -7,7 +7,7 @@ from django.db import models
 
 
 def _get_fernet() -> Fernet:
-    from easyshard.settings import api_settings
+    from easytenant.settings import api_settings
 
     return Fernet(api_settings.encryption_key)
 

@@ -5,7 +5,7 @@ from .models import BlogPost, User
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("username", "email", "shard_id", "is_active")
+    list_display = ("username", "email", "tenant_id", "is_active")
 
 
 @admin.register(BlogPost)

@@ -1,45 +1,45 @@
 import pytest
 
-from easyshard.connection_manager import reload
-from easyshard.context import reset_shard_id, set_shard_id
-from easyshard.models import ShardConfig
-from easyshard.routers import ShardRouter
+from easytenant.connection_manager import reload
+from easytenant.context import reset_tenant_id, set_tenant_id
+from easytenant.models import TenantConfig
+from easytenant.routers import TenantRouter
 from tests.testapp.models import BlogPost
 
 
 @pytest.mark.django_db
-class TestShardRouter:
+class TestTenantRouter:
     def setup_method(self):
-        self.router = ShardRouter()
+        self.router = TenantRouter()
 
-    def test_shardconfig_routes_to_default(self):
-        assert self.router.db_for_read(ShardConfig) == "default"
-        assert self.router.db_for_write(ShardConfig) == "default"
+    def test_tenantconfig_routes_to_default(self):
+        assert self.router.db_for_read(TenantConfig) == "default"
+        assert self.router.db_for_write(TenantConfig) == "default"
 
     def test_no_context_routes_to_default(self):
-        token = set_shard_id(None)
+        token = set_tenant_id(None)
         assert self.router.db_for_read(BlogPost) == "default"
         assert self.router.db_for_write(BlogPost) == "default"
-        reset_shard_id(token)
+        reset_tenant_id(token)
 
-    def test_sharded_model_routes_to_shard(self):
-        from tests.conftest import make_shard_config
+    def test_tenant_model_routes_to_tenant(self):
+        from tests.conftest import make_tenant_config
 
-        make_shard_config(shard_id="east", db_alias="shard_trial")
+        make_tenant_config(tenant_id="east", db_alias="tenant_trial")
         reload()
 
-        token = set_shard_id("east")
-        assert self.router.db_for_read(BlogPost) == "shard_trial"
-        assert self.router.db_for_write(BlogPost) == "shard_trial"
-        reset_shard_id(token)
+        token = set_tenant_id("east")
+        assert self.router.db_for_read(BlogPost) == "tenant_trial"
+        assert self.router.db_for_write(BlogPost) == "tenant_trial"
+        reset_tenant_id(token)
 
     def test_allow_relation_always_true(self):
         assert self.router.allow_relation(None, None) is True
 
-    def test_allow_migrate_easyshard_default_only(self):
-        assert self.router.allow_migrate("default", "easyshard") is True
-        assert self.router.allow_migrate("shard_trial", "easyshard") is False
+    def test_allow_migrate_easytenant_default_only(self):
+        assert self.router.allow_migrate("default", "easytenant") is True
+        assert self.router.allow_migrate("tenant_trial", "easytenant") is False
 
     def test_allow_migrate_other_apps_everywhere(self):
         assert self.router.allow_migrate("default", "testapp") is True
-        assert self.router.allow_migrate("shard_trial", "testapp") is True
+        assert self.router.allow_migrate("tenant_trial", "testapp") is True

@@ -3,7 +3,7 @@ name: Version Release
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 permissions:
@@ -28,7 +28,7 @@ jobs:
           pip install -e .[dev]
 
       - name: Run tests
-        run: python -m pytest tests/ -v --cov=easyshard
+        run: python -m pytest tests/ -v --cov=easytenant
 
   version:
     name: Semantic Release Version

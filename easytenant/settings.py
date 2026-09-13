@@ -2,11 +2,11 @@ from django.conf import settings
 from django.test.signals import setting_changed
 
 DEFAULTS = {
-    "ID_EXTRACTOR": "easyshard.extractors.JWTShardExtractor",
-    "ID_JWT_CLAIM": "shard_id",
-    "ID_HEADER_NAME": "X-Shard-Id",
+    "ID_EXTRACTOR": "easytenant.extractors.JWTTenantExtractor",
+    "ID_JWT_CLAIM": "tenant_id",
+    "ID_HEADER_NAME": "X-Tenant-Id",
     "CONFIG_MODE": "local",
-    "DB_RESOLVER": "easyshard.connection_manager.resolve_db",
+    "DB_RESOLVER": "easytenant.connection_manager.resolve_db",
     "MIDDLEWARE_VERIFY_TOKEN": True,
     "JWT_ALGORITHM": "HS256",
     "JWT_SIGNING_KEY": None,
@@ -14,9 +14,9 @@ DEFAULTS = {
     "RELOAD_SECRET": None,
     "CACHE_TTL": 300,
     "SERVICE_TOKEN": None,
-    "REMOTE_SHARD_CONFIG_URL": None,
-    "REMOTE_SHARD_CONFIG_PATH": "/shard-config/",
-    "ADMIN_SHARD_PARAM": "shard",
+    "REMOTE_TENANT_CONFIG_URL": None,
+    "REMOTE_TENANT_CONFIG_PATH": "/tenant-config/",
+    "ADMIN_TENANT_PARAM": "tenant",
 }
 
 IMPORT_STRINGS = [
@@ -24,7 +24,7 @@ IMPORT_STRINGS = [
     "DB_RESOLVER",
 ]
 
-REMOVED_SETTINGS = ["SHARDED_APPS"]
+REMOVED_SETTINGS = ["TENANTED_APPS"]
 
 
 class APISettings:
@@ -37,7 +37,7 @@ class APISettings:
     @property
     def user_settings(self) -> dict:
         if not hasattr(self, "_cached_user_settings"):
-            self._cached_user_settings = getattr(settings, "EASY_SHARD", {})
+            self._cached_user_settings = getattr(settings, "EASY_TENANT", {})
         return self._cached_user_settings
 
     def __getattr__(self, attr: str):
@@ -68,7 +68,7 @@ class APISettings:
         secret = django_settings.SECRET_KEY
         import hashlib
 
-        derived = hashlib.pbkdf2_hmac("sha256", secret.encode(), b"easyshard-salt", 480000)
+        derived = hashlib.pbkdf2_hmac("sha256", secret.encode(), b"easytenant-salt", 480000)
         import base64
 
         return base64.urlsafe_b64encode(derived)
@@ -109,14 +109,14 @@ class APISettings:
             del self._cached_user_settings
 
 
-USER_SETTINGS = getattr(settings, "EASY_SHARD", None)
+USER_SETTINGS = getattr(settings, "EASY_TENANT", None)
 
 api_settings = APISettings(USER_SETTINGS, DEFAULTS, IMPORT_STRINGS)
 
 
 def reload_api_settings(*args, **kwargs):
     setting = kwargs.get("setting")
-    if setting == "EASY_SHARD":
+    if setting == "EASY_TENANT":
         api_settings.reload()
 
 

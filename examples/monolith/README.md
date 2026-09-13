@@ -1,38 +1,38 @@
-# django-easyshard — Monolith Example
+# django-easytenant — Monolith Example
 
-A minimal Django project with database-per-tenant sharding using `django-easyshard`.
+A minimal Django project with database-per-tenant routing using `django-easytenant`.
 
 ## What this demonstrates
 
-- **3 databases**: `default` (auth + ShardConfig), `shard_trial`, `shard_enterprise`
-- **Custom User** with `ShardUserMixin` for manual shard assignment
-- **BlogPost model** that automatically routes to the correct shard database
-- **ShardMiddleware** extracting `shard_id` from JWT tokens
-- **ShardRouter** directing all non-easyshard queries to the shard DB
+- **3 databases**: `default` (auth + TenantConfig), `tenant_trial`, `tenant_enterprise`
+- **Custom User** with `TenantUserMixin` for manual tenant assignment
+- **BlogPost model** that automatically routes to the correct tenant database
+- **TenantMiddleware** extracting `tenant_id` from JWT tokens
+- **TenantRouter** directing all non-easytenant queries to the tenant DB
 
 ## Setup
 
 ```bash
 cd examples/monolith
 
-# Create virtualenv and install dependencies (including easyshard from parent)
+# Create virtualenv and install dependencies (including easytenant from parent)
 uv sync
 
 # Apply migrations to all three databases
 uv run python manage.py migrate
-uv run python manage.py migrate --database=shard_trial
-uv run python manage.py migrate --database=shard_enterprise
+uv run python manage.py migrate --database=tenant_trial
+uv run python manage.py migrate --database=tenant_enterprise
 
-# Create ShardConfig rows on the default database
+# Create TenantConfig rows on the default database
 uv run python manage.py shell
 ```
 
 ```python
-from easyshard.models import ShardConfig
+from easytenant.models import TenantConfig
 
-ShardConfig.objects.create(
-    shard_id="trial",
-    db_alias="shard_trial",
+TenantConfig.objects.create(
+    tenant_id="trial",
+    db_alias="tenant_trial",
     name=str(__import__("pathlib").Path("db_trial.sqlite3").resolve()),
     host="localhost",
     port=5432,
@@ -40,9 +40,9 @@ ShardConfig.objects.create(
     password="trial-db-password",
 )
 
-ShardConfig.objects.create(
-    shard_id="enterprise",
-    db_alias="shard_enterprise",
+TenantConfig.objects.create(
+    tenant_id="enterprise",
+    db_alias="tenant_enterprise",
     name=str(__import__("pathlib").Path("db_enterprise.sqlite3").resolve()),
     host="localhost",
     port=5432,
@@ -52,8 +52,8 @@ ShardConfig.objects.create(
 ```
 
 ```bash
-# Reload shard configs into the connection manager
-uv run python manage.py reload_shards
+# Reload tenant configs into the connection manager
+uv run python manage.py reload_tenants
 
 # Create a superuser (on default DB)
 uv run python manage.py createsuperuser
@@ -64,16 +64,16 @@ uv run python manage.py runserver
 
 ## How it works
 
-1. A user authenticates and receives a JWT containing a `shard_id` claim.
-2. On each request, `ShardMiddleware` extracts the `shard_id` from the JWT.
-3. `ShardRouter` routes all queries (except `easyshard` app models) to the shard database.
-4. `ShardConfig` and easyshard internal tables always route to `default`.
+1. A user authenticates and receives a JWT containing a `tenant_id` claim.
+2. On each request, `TenantMiddleware` extracts the `tenant_id` from the JWT.
+3. `TenantRouter` routes all queries (except `easytenant` app models) to the tenant database.
+4. `TenantConfig` and easytenant internal tables always route to `default`.
 
 ## Admin access
 
-The admin supports a `?shard=` query parameter for browsing data on specific shards:
+The admin supports a `?tenant=` query parameter for browsing data on specific tenants:
 
 ```
-/admin/blog/blogpost/?shard=trial
-/admin/blog/blogpost/?shard=enterprise
+/admin/blog/blogpost/?tenant=trial
+/admin/blog/blogpost/?tenant=enterprise
 ```

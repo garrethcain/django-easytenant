@@ -1,10 +1,10 @@
-"""Settings for the django-easyshard monolith example.
+"""Settings for the django-easytenant monolith example.
 
 This example demonstrates a single Django deployment with:
-  - A 'default' database for ShardConfig and auth tables.
-  - Two shard databases ('shard_trial', 'shard_enterprise').
-  - A custom User model using ShardUserMixin.
-  - JWT-based shard extraction via django-easyjwt.
+  - A 'default' database for TenantConfig and auth tables.
+  - Two tenant databases ('tenant_trial', 'tenant_enterprise').
+  - A custom User model using TenantUserMixin.
+  - JWT-based tenant extraction via django-easyjwt.
 """
 
 import os
@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "easyshard",
+    "easytenant",
     "blog",
 ]
 
@@ -35,7 +35,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "easyshard.middleware.ShardMiddleware",
+    "easytenant.middleware.TenantMiddleware",
 ]
 
 ROOT_URLCONF = "example_project.urls"
@@ -66,33 +66,33 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db_default.sqlite3",
     },
-    "shard_trial": {
+    "tenant_trial": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db_trial.sqlite3",
     },
-    "shard_enterprise": {
+    "tenant_enterprise": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db_enterprise.sqlite3",
     },
 }
 
-DATABASE_ROUTERS = ["easyshard.routers.ShardRouter"]
+DATABASE_ROUTERS = ["easytenant.routers.TenantRouter"]
 
-# --- easyshard configuration ------------------------------------------------
+# --- easytenant configuration ------------------------------------------------
 
-EASY_SHARD = {
-    # Extract shard_id from JWT tokens (default).
+EASY_TENANT = {
+    # Extract tenant_id from JWT tokens (default).
     # If using django-easyjwt, the claim name matches.
-    "ID_EXTRACTOR": "easyshard.extractors.JWTShardExtractor",
-    "ID_JWT_CLAIM": "shard_id",
+    "ID_EXTRACTOR": "easytenant.extractors.JWTTenantExtractor",
+    "ID_JWT_CLAIM": "tenant_id",
     "CONFIG_MODE": "local",
-    # Fernet key for encrypting passwords in ShardConfig.
+    # Fernet key for encrypting passwords in TenantConfig.
     # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     "ENCRYPTION_KEY": os.environ.get(
-        "EASYSHARD_ENCRYPTION_KEY",
+        "EASYTENANT_ENCRYPTION_KEY",
         "Y2hhbmdlLW1lLXByb2R1Y3Rpb24ta2V5LTMyLWJ5dGVzIQ==",
     ),
-    # Secret for the /shards/reload/ HTTP endpoint.
+    # Secret for the /tenants/reload/ HTTP endpoint.
     "RELOAD_SECRET": "example-reload-secret",
     # JWT verification defaults to HS256 with SECRET_KEY (same as django-easyjwt).
     # Override only if you've customized these in your JWT configuration.

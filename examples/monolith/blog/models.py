@@ -1,19 +1,19 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from easyshard.models import ShardUserMixin
+from easytenant.models import TenantUserMixin
 
 
-class User(ShardUserMixin, AbstractUser):
-    """Custom user with shard_id assignment.
+class User(TenantUserMixin, AbstractUser):
+    """Custom user with tenant_id assignment.
 
-    Users on 'trial' share the shard_trial database.
-    Users on 'enterprise' get their own shard_enterprise database.
+    Users on 'trial' share the tenant_trial database.
+    Users on 'enterprise' get their own tenant_enterprise database.
     """
 
 
 class BlogPost(models.Model):
-    """A simple model that lives on the user's shard database."""
+    """A simple model that lives on the user's tenant database."""
 
     title = models.CharField(max_length=200)
     body = models.TextField(blank=True)

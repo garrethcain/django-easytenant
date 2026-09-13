@@ -5,10 +5,10 @@ from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from easyshard.models import ShardConfig
-from easyshard.settings import api_settings
+from easytenant.models import TenantConfig
+from easytenant.settings import api_settings
 
-logger = logging.getLogger("easyshard")
+logger = logging.getLogger("easytenant")
 
 
 def _encrypt_for_transit(value: str) -> str:
@@ -24,10 +24,10 @@ def _decrypt_from_db(value: str) -> str:
 
 @csrf_exempt
 @require_http_methods(["GET"])
-def shard_config_detail(request, shard_id):
-    """Return a single shard's connection config (encrypted).
+def tenant_config_detail(request, tenant_id):
+    """Return a single tenant's connection config (encrypted).
 
-    GET /shard-config/{shard_id}/
+    GET /tenant-config/{tenant_id}/
 
     Requires Authorization: Bearer <service_token> header.
     The password is re-encrypted with the shared key for transit.
@@ -40,12 +40,12 @@ def shard_config_detail(request, shard_id):
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
     try:
-        config = ShardConfig.objects.get(shard_id=shard_id, is_active=True)
-    except ShardConfig.DoesNotExist:
-        return JsonResponse({"error": "Shard not found"}, status=404)
+        config = TenantConfig.objects.get(tenant_id=tenant_id, is_active=True)
+    except TenantConfig.DoesNotExist:
+        return JsonResponse({"error": "Tenant not found"}, status=404)
 
     data = {
-        "shard_id": config.shard_id,
+        "tenant_id": config.tenant_id,
         "db_alias": config.db_alias,
         "engine": config.engine,
         "name": config.name,
@@ -60,15 +60,15 @@ def shard_config_detail(request, shard_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def reload_shards(request):
-    """Trigger a reload of shard configurations.
+def reload_tenants(request):
+    """Trigger a reload of tenant configurations.
 
-    POST /shards/reload/
+    POST /tenants/reload/
 
-    Requires X-Shard-Reload-Secret header matching RELOAD_SECRET setting.
+    Requires X-Tenant-Reload-Secret header matching RELOAD_SECRET setting.
     """
     reload_secret = api_settings._get_raw_setting("RELOAD_SECRET")
-    provided = request.headers.get("X-Shard-Reload-Secret", "")
+    provided = request.headers.get("X-Tenant-Reload-Secret", "")
 
     if not reload_secret or provided != reload_secret:
         return JsonResponse({"error": "Unauthorized"}, status=403)
@@ -77,9 +77,9 @@ def reload_shards(request):
 
     try:
         if mode == "local":
-            from easyshard.connection_manager import reload as do_reload
+            from easytenant.connection_manager import reload as do_reload
         else:
-            from easyshard.remote_connection_manager import reload as do_reload
+            from easytenant.remote_connection_manager import reload as do_reload
 
         do_reload()
     except Exception as e:

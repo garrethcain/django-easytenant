@@ -2,7 +2,7 @@ from django.db import models
 
 
 class BlogPost(models.Model):
-    """A simple model that will be routed to shard databases."""
+    """A simple model that will be routed to tenant databases."""
 
     title = models.CharField(max_length=200)
     content = models.TextField(blank=True)

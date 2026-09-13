@@ -1,8 +1,8 @@
-# django-easyshard
+# django-easytenant
 
-JWT-driven database-per-tenant sharding for Django.
+JWT-driven database-per-tenant routing for Django.
 
-Route every request to the correct database by extracting a `shard_id` from JWT tokens (or any source), resolving it to a Django database alias, and directing the ORM through a database router — all transparently.
+Route every request to the correct database by extracting a `tenant_id` from JWT tokens (or any source), resolving it to a Django database alias, and directing the ORM through a database router — all transparently.
 
 Designed as a companion to [django-easyjwt](https://github.com/garrethcain/django-easyjwt) but works with **any** JWT system or extraction strategy.
 
@@ -10,15 +10,15 @@ Designed as a companion to [django-easyjwt](https://github.com/garrethcain/djang
 
 ## Features
 
-- **Database-per-tenant routing** — each request's data goes to the right shard, automatically.
-- **Pluggable shard ID extraction** — JWT, headers, sessions, admin query params, or your own custom extractor.
-- **Manual shard assignment** — users are assigned to shards, enabling tiered infrastructure (trial users share a DB, enterprise get dedicated instances).
+- **Database-per-tenant routing** — each request's data goes to the right tenant, automatically.
+- **Pluggable tenant ID extraction** — JWT, headers, sessions, admin query params, or your own custom extractor.
+- **Manual tenant assignment** — users are assigned to tenants, enabling tiered infrastructure (trial users share a DB, enterprise get dedicated instances).
 - **Two deployment modes**:
-  - `local` — monolith reads `ShardConfig` from its own `default` database.
-  - `remote` — microservice fetches shard configs from an auth service via HTTP with TTL caching.
+  - `local` — monolith reads `TenantConfig` from its own `default` database.
+  - `remote` — microservice fetches tenant configs from an auth service via HTTP with TTL caching.
 - **Encrypted credentials** — database passwords encrypted at rest with Fernet (cryptography library).
-- **Dynamic shard discovery** — add/remove shards at runtime via model, management command, or HTTP endpoint.
-- **Admin support** — browse shard data with `?shard=` query parameter.
+- **Dynamic tenant discovery** — add/remove tenants at runtime via model, management command, or HTTP endpoint.
+- **Admin support** — browse tenant data with `?tenant=` query parameter.
 - **Composable** — works alongside schema-level tenancy libraries like `django-tenants`.
 
 ---
@@ -26,17 +26,17 @@ Designed as a companion to [django-easyjwt](https://github.com/garrethcain/djang
 ## Installation
 
 ```bash
-uv add django-easyshard
+uv add django-easytenant
 
 # For JWT extraction (default):
-uv add "django-easyshard[jwt]"
+uv add "django-easytenant[jwt]"
 
 # For remote/microservice mode:
-uv add "django-easyshard[remote]"
+uv add "django-easytenant[remote]"
 
 # For development (from source):
-git clone https://github.com/garrethcain/django-easyshard
-cd django-easyshard
+git clone https://github.com/garrethcain/django-easytenant
+cd django-easytenant
 uv sync --extra dev
 ```
 
@@ -49,7 +49,7 @@ uv sync --extra dev
 ```python
 INSTALLED_APPS = [
     ...
-    "easyshard",
+    "easytenant",
 ]
 ```
 
@@ -62,28 +62,28 @@ DATABASES = {
         "NAME": "auth_db",
         ...
     },
-    "shard_trial": {
+    "tenant_trial": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "shard_trial",
+        "NAME": "tenant_trial",
         ...
     },
-    "shard_enterprise": {
+    "tenant_enterprise": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "shard_enterprise",
+        "NAME": "tenant_enterprise",
         ...
     },
 }
 
-DATABASE_ROUTERS = ["easyshard.routers.ShardRouter"]
+DATABASE_ROUTERS = ["easytenant.routers.TenantRouter"]
 ```
 
 ### 3. Configure settings
 
 ```python
-EASY_SHARD = {
+EASY_TENANT = {
     "CONFIG_MODE": "local",
-    "ID_EXTRACTOR": "easyshard.extractors.JWTShardExtractor",
-    "ID_JWT_CLAIM": "shard_id",
+    "ID_EXTRACTOR": "easytenant.extractors.JWTTenantExtractor",
+    "ID_JWT_CLAIM": "tenant_id",
     "ENCRYPTION_KEY": "your-fernet-key",  # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 }
 ```
@@ -95,39 +95,39 @@ EASY_SHARD = {
 ```python
 MIDDLEWARE = [
     ...
-    "easyshard.middleware.ShardMiddleware",
+    "easytenant.middleware.TenantMiddleware",
 ]
 ```
 
-### 5. Add `shard_id` to your User model
+### 5. Add `tenant_id` to your User model
 
 ```python
 from django.contrib.auth.models import AbstractUser
-from easyshard.models import ShardUserMixin
+from easytenant.models import TenantUserMixin
 
-class User(ShardUserMixin, AbstractUser):
+class User(TenantUserMixin, AbstractUser):
     pass
 ```
 
-### 6. Create ShardConfig entries
+### 6. Create TenantConfig entries
 
 ```python
-from easyshard.models import ShardConfig
+from easytenant.models import TenantConfig
 
-ShardConfig.objects.create(
-    shard_id="trial",
-    db_alias="shard_trial",
-    name="shard_trial",
+TenantConfig.objects.create(
+    tenant_id="trial",
+    db_alias="tenant_trial",
+    name="tenant_trial",
     host="localhost",
     port=5432,
     user="app",
     password="db-password",  # encrypted at rest
 )
 
-ShardConfig.objects.create(
-    shard_id="enterprise",
-    db_alias="shard_enterprise",
-    name="shard_enterprise",
+TenantConfig.objects.create(
+    tenant_id="enterprise",
+    db_alias="tenant_enterprise",
+    name="tenant_enterprise",
     host="localhost",
     port=5432,
     user="app",
@@ -135,12 +135,12 @@ ShardConfig.objects.create(
 )
 ```
 
-### 7. Issue JWTs with `shard_id` claim
+### 7. Issue JWTs with `tenant_id` claim
 
 ```json
 {
   "user_id": 42,
-  "shard_id": "enterprise",
+  "tenant_id": "enterprise",
   "exp": 1700000000
 }
 ```
@@ -153,24 +153,24 @@ That's it. Every request with a valid JWT now routes automatically to the correc
 
 ### Local Mode (Monolith)
 
-A single Django deployment managing all shard databases.
+A single Django deployment managing all tenant databases.
 
 ```python
-EASY_SHARD = {
+EASY_TENANT = {
     "CONFIG_MODE": "local",
 }
 ```
 
-`ShardConfig` rows live on the `default` database. The connection manager loads them on first access and injects connection details into Django's `connections.settings` at runtime.
+`TenantConfig` rows live on the `default` database. The connection manager loads them on first access and injects connection details into Django's `connections.settings` at runtime.
 
 ### Remote Mode (Microservice)
 
-Shard databases are only accessible from worker services. The auth service hosts `ShardConfig` and exposes an API endpoint.
+Tenant databases are only accessible from worker services. The auth service hosts `TenantConfig` and exposes an API endpoint.
 
 **Auth service:**
 
 ```python
-EASY_SHARD = {
+EASY_TENANT = {
     "CONFIG_MODE": "local",
     "SERVICE_TOKEN": "shared-service-token",
 }
@@ -181,42 +181,42 @@ Include the API URLs:
 ```python
 # urls.py
 urlpatterns = [
-    path("", include("easyshard.urls")),
+    path("", include("easytenant.urls")),
 ]
 ```
 
 This exposes:
 
-- `GET /shard-config/{shard_id}/` — returns a single shard's connection config (password re-encrypted for transit).
-- `POST /shards/reload/` — triggers a reload of shard configs (requires `X-Shard-Reload-Secret` header).
+- `GET /tenant-config/{tenant_id}/` — returns a single tenant's connection config (password re-encrypted for transit).
+- `POST /tenants/reload/` — triggers a reload of tenant configs (requires `X-Tenant-Reload-Secret` header).
 
 **Worker service:**
 
 ```python
-EASY_SHARD = {
+EASY_TENANT = {
     "CONFIG_MODE": "remote",
-    "REMOTE_SHARD_CONFIG_URL": "https://auth.example.com",
-    "REMOTE_SHARD_CONFIG_PATH": "/shard-config/",
+    "REMOTE_TENANT_CONFIG_URL": "https://auth.example.com",
+    "REMOTE_TENANT_CONFIG_PATH": "/tenant-config/",
     "SERVICE_TOKEN": "shared-service-token",
     "ENCRYPTION_KEY": "shared-fernet-key",
     "CACHE_TTL": 300,  # seconds
 }
 ```
 
-On first request for a shard, the worker fetches the config from the auth service, decrypts the password, and injects the connection into Django. The config is cached for `CACHE_TTL` seconds.
+On first request for a tenant, the worker fetches the config from the auth service, decrypts the password, and injects the connection into Django. The config is cached for `CACHE_TTL` seconds.
 
 ---
 
-## Shard ID Extraction
+## Tenant ID Extraction
 
 The middleware delegates to a configurable extractor. Override `ID_EXTRACTOR` to change the strategy:
 
 ### JWT (default)
 
 ```python
-EASY_SHARD = {
-    "ID_EXTRACTOR": "easyshard.extractors.JWTShardExtractor",
-    "ID_JWT_CLAIM": "shard_id",
+EASY_TENANT = {
+    "ID_EXTRACTOR": "easytenant.extractors.JWTTenantExtractor",
+    "ID_JWT_CLAIM": "tenant_id",
     "MIDDLEWARE_VERIFY_TOKEN": True,  # verify JWT signatures (default: True)
 }
 ```
@@ -226,9 +226,9 @@ Uses `HS256` and `SECRET_KEY` by default — matching django-easyjwt's defaults.
 **Using django-easyjwt with a custom signing key?** Subclass to read from easyjwt's settings:
 
 ```python
-from easyshard.extractors import JWTShardExtractor
+from easytenant.extractors import JWTTenantExtractor
 
-class EasyJWTShardExtractor(JWTShardExtractor):
+class EasyJWTTenantExtractor(JWTTenantExtractor):
     def get_signing_key(self):
         from easyjwt_auth.settings import api_settings
         return api_settings.SIGNING_KEY
@@ -239,41 +239,41 @@ class EasyJWTShardExtractor(JWTShardExtractor):
 ```
 
 ```python
-EASY_SHARD = {
-    "ID_EXTRACTOR": "myapp.extractors.EasyJWTShardExtractor",
+EASY_TENANT = {
+    "ID_EXTRACTOR": "myapp.extractors.EasyJWTTenantExtractor",
 }
 ```
 
 ### HTTP Header
 
 ```python
-EASY_SHARD = {
-    "ID_EXTRACTOR": "easyshard.extractors.HeaderShardExtractor",
-    "ID_HEADER_NAME": "X-Shard-Id",
+EASY_TENANT = {
+    "ID_EXTRACTOR": "easytenant.extractors.HeaderTenantExtractor",
+    "ID_HEADER_NAME": "X-Tenant-Id",
 }
 ```
 
 ### Session
 
 ```python
-EASY_SHARD = {
-    "ID_EXTRACTOR": "easyshard.extractors.SessionShardExtractor",
+EASY_TENANT = {
+    "ID_EXTRACTOR": "easytenant.extractors.SessionTenantExtractor",
 }
 ```
 
 ### Custom
 
 ```python
-from easyshard.extractors import BaseShardExtractor
+from easytenant.extractors import BaseTenantExtractor
 
-class TenantShardExtractor(BaseShardExtractor):
+class CustomTenantExtractor(BaseTenantExtractor):
     def extract(self, request):
-        return request.tenant.shard_id
+        return request.tenant.tenant_id
 ```
 
 ```python
-EASY_SHARD = {
-    "ID_EXTRACTOR": "myapp.extractors.TenantShardExtractor",
+EASY_TENANT = {
+    "ID_EXTRACTOR": "myapp.extractors.CustomTenantExtractor",
 }
 ```
 
@@ -283,72 +283,72 @@ EASY_SHARD = {
 
 | Component            | Behavior                                                                                                          |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `ShardMiddleware`    | Extracts `shard_id` from each request, sets it in a `ContextVar`. Clears after response.                          |
-| `ShardRouter`        | Routes all models (except `easyshard` app) to the shard DB when context is active. Routes to `default` otherwise. |
-| `connection_manager` | Resolves `shard_id` → Django database alias. Injects connection params into `connections.settings`.               |
-| `ShardConfig` model  | Always routes to `default`. Stores encrypted credentials.                                                         |
+| `TenantMiddleware`    | Extracts `tenant_id` from each request, sets it in a `ContextVar`. Clears after response.                          |
+| `TenantRouter`        | Routes all models (except `easytenant` app) to the tenant DB when context is active. Routes to `default` otherwise. |
+| `connection_manager` | Resolves `tenant_id` → Django database alias. Injects connection params into `connections.settings`.               |
+| `TenantConfig` model  | Always routes to `default`. Stores encrypted credentials.                                                         |
 
-**`allow_relation`** always returns `True` — every shard contains the full schema, so all related objects are always co-located.
+**`allow_relation`** always returns `True` — every tenant contains the full schema, so all related objects are always co-located.
 
-**Missing shard** — when the middleware sets a `shard_id` that has no `ShardConfig`, `ShardNotConfiguredError` is raised, resulting in an HTTP 500.
+**Missing tenant** — when the middleware sets a `tenant_id` that has no `TenantConfig`, `TenantNotConfiguredError` is raised, resulting in an HTTP 500.
 
 ---
 
 ## Admin Integration
 
-The admin supports a `?shard=` query parameter for browsing data on specific shards:
+The admin supports a `?tenant=` query parameter for browsing data on specific tenants:
 
 ```
-/admin/blog/blogpost/?shard=trial
-/admin/blog/blogpost/?shard=enterprise
+/admin/blog/blogpost/?tenant=trial
+/admin/blog/blogpost/?tenant=enterprise
 ```
 
-This works because `AdminShardExtractor` is a fallback in the middleware — if the primary extractor returns `None`, the query param is checked.
+This works because `AdminTenantExtractor` is a fallback in the middleware — if the primary extractor returns `None`, the query param is checked.
 
 ---
 
 ## Management Commands
 
 ```bash
-# Reload shard configs from the database
-uv run python manage.py reload_shards
+# Reload tenant configs from the database
+uv run python manage.py reload_tenants
 ```
 
-Shard configs also auto-reload when `ShardConfig` records are saved or deleted (via Django signals).
+Tenant configs also auto-reload when `TenantConfig` records are saved or deleted (via Django signals).
 
 ---
 
 ## Settings Reference
 
-All settings live under the `EASY_SHARD` dictionary.
+All settings live under the `EASY_TENANT` dictionary.
 
 | Setting                    | Default                                   | Description                                         |
 | -------------------------- | ----------------------------------------- | --------------------------------------------------- |
-| `ID_EXTRACTOR`             | `easyshard.extractors.JWTShardExtractor`  | Import path to shard ID extractor class.            |
-| `ID_JWT_CLAIM`             | `shard_id`                                | JWT claim name containing the shard ID.             |
-| `ID_HEADER_NAME`           | `X-Shard-Id`                              | Header name for `HeaderShardExtractor`.             |
+| `ID_EXTRACTOR`             | `easytenant.extractors.JWTTenantExtractor`  | Import path to tenant ID extractor class.            |
+| `ID_JWT_CLAIM`             | `tenant_id`                                | JWT claim name containing the tenant ID.             |
+| `ID_HEADER_NAME`           | `X-Tenant-Id`                              | Header name for `HeaderTenantExtractor`.             |
 | `CONFIG_MODE`              | `local`                                   | `local` (monolith) or `remote` (microservice).      |
-| `DB_RESOLVER`              | `easyshard.connection_manager.resolve_db` | Callable that maps `shard_id` → database alias.     |
+| `DB_RESOLVER`              | `easytenant.connection_manager.resolve_db` | Callable that maps `tenant_id` → database alias.     |
 | `MIDDLEWARE_VERIFY_TOKEN`  | `True`                                    | Whether to verify JWT signatures in the middleware. |
 | `JWT_ALGORITHM`            | `HS256`                                   | JWT algorithm for verification.                     |
 | `JWT_SIGNING_KEY`          | `None` (falls back to `SECRET_KEY`)       | Key for JWT verification.                           |
 | `ENCRYPTION_KEY`           | `None` (derives from `SECRET_KEY`)        | Fernet key for encrypting credentials.              |
-| `RELOAD_SECRET`            | `None`                                    | Secret for the `/shards/reload/` HTTP endpoint.     |
+| `RELOAD_SECRET`            | `None`                                    | Secret for the `/tenants/reload/` HTTP endpoint.     |
 | `CACHE_TTL`                | `300`                                     | Cache TTL in seconds (remote mode only).            |
 | `SERVICE_TOKEN`            | `None`                                    | Bearer token for auth service API (remote mode).    |
-| `REMOTE_SHARD_CONFIG_URL`  | `None`                                    | Base URL of auth service (remote mode).             |
-| `REMOTE_SHARD_CONFIG_PATH` | `/shard-config/`                          | Path to shard config API (remote mode).             |
-| `ADMIN_SHARD_PARAM`        | `shard`                                   | Query parameter name for admin shard selection.     |
+| `REMOTE_TENANT_CONFIG_URL`  | `None`                                    | Base URL of auth service (remote mode).             |
+| `REMOTE_TENANT_CONFIG_PATH` | `/tenant-config/`                          | Path to tenant config API (remote mode).             |
+| `ADMIN_TENANT_PARAM`        | `tenant`                                   | Query parameter name for admin tenant selection.     |
 
 ---
 
 ## Composing with Schema-Level Tenancy
 
-`django-easyshard` operates at the **database connection** layer. Schema-level libraries like `django-tenants` operate at the **schema/search_path** layer. They can be composed:
+`django-easytenant` operates at the **database connection** layer. Schema-level libraries like `django-tenants` operate at the **schema/search_path** layer. They can be composed:
 
 ```python
-# Each tenant gets their own PostgreSQL schema within a shard database.
-# django-easyshard routes to the correct database instance.
+# Each tenant gets their own PostgreSQL schema within a tenant database.
+# django-easytenant routes to the correct database instance.
 # django-tenants sets the search_path within that database.
 ```
 

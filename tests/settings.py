@@ -1,4 +1,4 @@
-SECRET_KEY = "test-secret-key-for-easyshard-not-for-production"
+SECRET_KEY = "test-secret-key-for-easytenant-not-for-production"
 
 DEBUG = True
 
@@ -8,7 +8,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "easyshard",
+    "easytenant",
     "tests.testapp",
 ]
 
@@ -16,7 +16,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "easyshard.middleware.ShardMiddleware",
+    "easytenant.middleware.TenantMiddleware",
 ]
 
 DATABASES = {
@@ -24,21 +24,21 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     },
-    "shard_trial": {
+    "tenant_trial": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     },
-    "shard_enterprise": {
+    "tenant_enterprise": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     },
 }
 
-DATABASE_ROUTERS = ["easyshard.routers.ShardRouter"]
+DATABASE_ROUTERS = ["easytenant.routers.TenantRouter"]
 
-EASY_SHARD = {
+EASY_TENANT = {
     "CONFIG_MODE": "local",
-    "ID_EXTRACTOR": "easyshard.extractors.JWTShardExtractor",
+    "ID_EXTRACTOR": "easytenant.extractors.JWTTenantExtractor",
     "ENCRYPTION_KEY": None,
 }
 

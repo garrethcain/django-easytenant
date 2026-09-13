@@ -1,29 +1,29 @@
 import pytest
 
-from easyshard.context import reset_shard_id, set_shard_id
+from easytenant.context import reset_tenant_id, set_tenant_id
 
 
 @pytest.fixture
-def shard_context():
-    """Set a shard_id in the context for the duration of the test."""
-    token = set_shard_id("trial")
+def tenant_context():
+    """Set a tenant_id in the context for the duration of the test."""
+    token = set_tenant_id("trial")
     yield "trial"
-    reset_shard_id(token)
+    reset_tenant_id(token)
 
 
 @pytest.fixture
-def no_shard_context():
-    """Ensure no shard_id is set."""
-    token = set_shard_id(None)
+def no_tenant_context():
+    """Ensure no tenant_id is set."""
+    token = set_tenant_id(None)
     yield None
-    reset_shard_id(token)
+    reset_tenant_id(token)
 
 
 @pytest.fixture(autouse=True)
 def reset_connection_manager():
     """Reset the connection manager cache after each test."""
     yield
-    from easyshard.connection_manager import reload
+    from easytenant.connection_manager import reload
 
     try:
         reload()
@@ -31,9 +31,9 @@ def reset_connection_manager():
         pass
 
 
-def make_shard_config(**kwargs):
-    """Helper to create a ShardConfig with sqlite3 defaults for testing."""
-    from easyshard.models import ShardConfig
+def make_tenant_config(**kwargs):
+    """Helper to create a TenantConfig with sqlite3 defaults for testing."""
+    from easytenant.models import TenantConfig
 
     defaults = {
         "engine": "django.db.backends.sqlite3",
@@ -45,4 +45,4 @@ def make_shard_config(**kwargs):
         "is_active": True,
     }
     defaults.update(kwargs)
-    return ShardConfig.objects.create(**defaults)
+    return TenantConfig.objects.create(**defaults)

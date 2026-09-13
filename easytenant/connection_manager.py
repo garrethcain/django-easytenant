@@ -4,9 +4,9 @@ from typing import Dict, Optional
 
 from django.db import connections
 
-from easyshard.exceptions import ShardNotConfiguredError
+from easytenant.exceptions import TenantNotConfiguredError
 
-logger = logging.getLogger("easyshard")
+logger = logging.getLogger("easytenant")
 
 _cache_lock = threading.Lock()
 _cache: Dict[str, str] = {}
@@ -14,12 +14,12 @@ _loaded = False
 
 
 def _load():
-    """Load all active ShardConfig rows and inject connections."""
+    """Load all active TenantConfig rows and inject connections."""
     global _cache, _loaded
 
-    from easyshard.models import ShardConfig
+    from easytenant.models import TenantConfig
 
-    configs = ShardConfig.objects.filter(is_active=True)
+    configs = TenantConfig.objects.filter(is_active=True)
     new_cache: Dict[str, str] = {}
 
     for config in configs:
@@ -32,8 +32,8 @@ def _load():
         conn_dict.setdefault("TIME_ZONE", None)
         conn_dict.setdefault("TEST", {})
         connections.settings[config.db_alias] = conn_dict
-        new_cache[config.shard_id] = config.db_alias
-        logger.debug("Loaded shard config: %s → %s", config.shard_id, config.db_alias)
+        new_cache[config.tenant_id] = config.db_alias
+        logger.debug("Loaded tenant config: %s → %s", config.tenant_id, config.db_alias)
 
     with _cache_lock:
         _cache = new_cache
@@ -45,35 +45,35 @@ def _ensure_loaded():
         _load()
 
 
-def resolve_db(shard_id: str) -> str:
-    """Resolve a shard_id to a database alias.
+def resolve_db(tenant_id: str) -> str:
+    """Resolve a tenant_id to a database alias.
 
-    The default DB_RESOLVER used by ShardRouter.
-    Raises ShardNotConfiguredError if no matching config exists.
+    The default DB_RESOLVER used by TenantRouter.
+    Raises TenantNotConfiguredError if no matching config exists.
     """
     _ensure_loaded()
 
     with _cache_lock:
-        db_alias = _cache.get(shard_id)
+        db_alias = _cache.get(tenant_id)
 
     if db_alias is None:
-        raise ShardNotConfiguredError(shard_id)
+        raise TenantNotConfiguredError(tenant_id)
 
     return db_alias
 
 
 def get_all_aliases() -> list[str]:
-    """Return all known shard db aliases."""
+    """Return all known tenant db aliases."""
     _ensure_loaded()
     with _cache_lock:
         return list(set(_cache.values()))
 
 
 def reload():
-    """Clear cache and re-read all ShardConfig rows."""
+    """Clear cache and re-read all TenantConfig rows."""
     global _loaded
     with _cache_lock:
         _cache.clear()
         _loaded = False
     _load()
-    logger.info("Shard configs reloaded: %d active shards", len(_cache))
+    logger.info("Tenant configs reloaded: %d active tenants", len(_cache))
